@@ -1,9 +1,9 @@
 
 import Capa from './Capa'
 import Estrelas from './Estrelas'
+import { formatarPlataformas } from '../utils/plataforma'
 
 const fmt = (n) => Number(n).toFixed(1).replace('.', ',')
-
 
 const data = (valor) => {
   if (!valor) return 'Data indisponível'
@@ -37,9 +37,7 @@ export default function AvaliacaoCard({ avaliacao, jogo, media }) {
         <h3 className="truncate text-lg font-bold">{jogo.titulo}</h3>
 
         <p className="text-xs text-white/50">
-          {jogo.genero} · {Array.isArray(jogo.plataforma)
-            ? jogo.plataforma.join(', ')
-            : jogo.plataforma}
+          {jogo.genero} · {formatarPlataformas(jogo.plataforma)}
         </p>
 
         <div className="mt-2 flex items-center gap-2">

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cadastrarAvaliacao, listarJogos } from '../services/api'
+import { formatarPlataformas } from '../utils/plataforma'
 
 export default function NovaAvaliacao() {
   const [jogos, setJogos] = useState([])
@@ -327,7 +328,7 @@ export default function NovaAvaliacao() {
                 </h3>
                 <p className="mt-1 text-[10px] text-[#a4a79e]">
                   {jogoSelecionado.genero || 'Gênero não informado'} ·{' '}
-                  {jogoSelecionado.plataforma || 'Plataforma não informada'}
+                  {formatarPlataformas(jogoSelecionado.plataforma)}
                 </p>
 
                 <div className="mt-4 flex items-center gap-3 border-t border-[#292e27] pt-3">
@@ -372,17 +373,4 @@ export default function NovaAvaliacao() {
       </div>
     </section>
   )
-}
-
-export async function buscarJogoPorId(id) {
-  const resposta = await fetch(`${API_URL}/jogo/${id}`)
-  const dados = await resposta.json()
-
-  if (!resposta.ok) {
-    throw new Error(
-      dados.erro || 'Não foi possível encontrar o jogo.'
-    )
-  }
-
-  return dados.jogo
 }

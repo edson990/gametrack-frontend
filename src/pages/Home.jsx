@@ -7,47 +7,12 @@ import {
 } from '../services/api'
 import AvaliacaoCard from '../components/AvaliacaoCard'
 import Paginacao from '../components/Paginacao'
+import { formatarPlataformas } from '../utils/plataforma'
 
 const POR_PAGINA = 4
 
 const campo =
   'rounded-lg border border-borda bg-card px-3 py-2.5 text-sm outline-none focus:border-destaque'
-
-// Converte plataformas recebidas como array ou texto do PostgreSQL.
-function formatarPlataformas(plataforma) {
-  if (Array.isArray(plataforma)) {
-    return plataforma.join(', ')
-  }
-
-  if (typeof plataforma !== 'string' || !plataforma.trim()) {
-    return 'Não informada'
-  }
-
-  const valor = plataforma.trim()
-
-  // Trata o formato JSON: ["PC", "PlayStation"]
-  try {
-    const convertido = JSON.parse(valor)
-
-    if (Array.isArray(convertido)) {
-      return convertido.join(', ')
-    }
-  } catch {
-    // O valor pode estar no formato de array do PostgreSQL.
-  }
-
-  // Trata o formato PostgreSQL: {PC} ou {"PC","PlayStation"}
-  if (valor.startsWith('{') && valor.endsWith('}')) {
-    return valor
-      .slice(1, -1)
-      .split(',')
-      .map((item) => item.trim().replace(/^"|"$/g, ''))
-      .filter(Boolean)
-      .join(', ') || 'Não informada'
-  }
-
-  return valor
-}
 
 export default function Home() {
   const [jogosBanco, setJogosBanco] = useState([])
@@ -70,7 +35,6 @@ export default function Home() {
   const [ordem, setOrdem] = useState('recentes')
   const [pagina, setPagina] = useState(1)
 
-  // Carrega a biblioteca completa e as avaliações.
   useEffect(() => {
     async function carregarJogos() {
       try {
@@ -104,7 +68,6 @@ export default function Home() {
     carregarAvaliacoes()
   }, [])
 
-  // Pesquisa um jogo pelo ID.
   async function pesquisarPorId(event) {
     event.preventDefault()
 
@@ -143,7 +106,6 @@ export default function Home() {
     setErroBuscaId('')
   }
 
-  // Filtra a biblioteca consultando o backend.
   async function filtrarJogosPorGenero(novoGenero) {
     setGeneroJogos(novoGenero)
     setCarregandoJogos(true)
@@ -159,7 +121,6 @@ export default function Home() {
     }
   }
 
-  // Mantém os gêneros completos mesmo quando a biblioteca está filtrada.
   const generos = useMemo(
     () => [
       ...new Set(
@@ -169,7 +130,6 @@ export default function Home() {
     [todosOsJogos]
   )
 
-  // Filtra e ordena as avaliações.
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase()
 
@@ -223,7 +183,6 @@ export default function Home() {
     }
   }
 
-  // Cartão de jogo reutilizado na biblioteca e na busca por ID.
   function renderizarJogo(jogo) {
     return (
       <article
