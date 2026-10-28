@@ -20,14 +20,14 @@ const botaoAcao =
 const botaoExcluir =
   'rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10'
 
-function Modal({ titulo, onFechar, children }) {
+function Modal({ titulo, onFechar, largura = 'max-w-lg', children }) {
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4"
       onClick={onFechar}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-borda bg-card p-5"
+        className={`max-h-[90vh] w-full ${largura} overflow-y-auto rounded-xl border border-borda bg-card p-5`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -73,6 +73,9 @@ export default function Home() {
   const [salvando, setSalvando] = useState(false)
   const [erroModal, setErroModal] = useState('')
   const [erroAcao, setErroAcao] = useState('')
+
+  const [confirmacao, setConfirmacao] = useState(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   async function carregarJogos() {
     try {
@@ -224,32 +227,50 @@ export default function Home() {
     }
   }
 
-  async function removerJogo(jogo) {
-    if (!window.confirm(`Excluir "${jogo.titulo}"?`)) return
-
+  function removerJogo(jogo) {
     setErroAcao('')
+    setConfirmacao({
+      titulo: 'Excluir jogo',
+      mensagem: `Excluir "${jogo.titulo}"? Essa ação não pode ser desfeita.`,
+      erroPadrao: 'Não foi possível excluir o jogo.',
+      acao: async () => {
+        await excluirJogo(jogo.id)
+        setFiltroJogo('')
+        limparSelecao()
+        await Promise.all([carregarJogos(), carregarAvaliacoes()])
+      },
+    })
+  }
+
+  function removerAvaliacao(avaliacao) {
+    setErroAcao('')
+    setConfirmacao({
+      titulo: 'Excluir avaliação',
+      mensagem: 'Excluir esta avaliação? Essa ação não pode ser desfeita.',
+      erroPadrao: 'Não foi possível excluir a avaliação.',
+      acao: async () => {
+        await excluirAvaliacao(avaliacao.id)
+        await Promise.all([carregarAvaliacoes(), carregarJogos()])
+      },
+    })
+  }
+
+  async function confirmarExclusao() {
+    const atual = confirmacao
+    setExcluindo(true)
 
     try {
-      await excluirJogo(jogo.id)
-      setFiltroJogo('')
-      limparSelecao()
-      await Promise.all([carregarJogos(), carregarAvaliacoes()])
+      await atual.acao()
     } catch (erro) {
-      setErroAcao(erro.message || 'Não foi possível excluir o jogo.')
+      setErroAcao(erro.message || atual.erroPadrao)
+    } finally {
+      setExcluindo(false)
+      setConfirmacao(null)
     }
   }
 
-  async function removerAvaliacao(avaliacao) {
-    if (!window.confirm('Excluir esta avaliação?')) return
-
-    setErroAcao('')
-
-    try {
-      await excluirAvaliacao(avaliacao.id)
-      await Promise.all([carregarAvaliacoes(), carregarJogos()])
-    } catch (erro) {
-      setErroAcao(erro.message || 'Não foi possível excluir a avaliação.')
-    }
+  function cancelarExclusao() {
+    if (!excluindo) setConfirmacao(null)
   }
 
   const lista = useMemo(() => {
@@ -686,6 +707,35 @@ export default function Home() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {confirmacao && (
+        <Modal
+          titulo={confirmacao.titulo}
+          onFechar={cancelarExclusao}
+          largura="max-w-sm"
+        >
+          <p className="text-sm text-white/70">{confirmacao.mensagem}</p>
+
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={cancelarExclusao}
+              disabled={excluindo}
+              className={`${botaoAcao} disabled:opacity-50`}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={confirmarExclusao}
+              disabled={excluindo}
+              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50"
+            >
+              {excluindo ? 'Excluindo...' : 'Excluir'}
+            </button>
+          </div>
         </Modal>
       )}
     </section>
