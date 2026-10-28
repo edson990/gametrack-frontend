@@ -1,187 +1,276 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import {
   listarJogos,
   buscarJogoPorId,
   listarAvaliacoes,
+  editarJogo,
+  excluirJogo,
+  editarAvaliacao,
+  excluirAvaliacao,
 } from '../services/api'
 import AvaliacaoCard from '../components/AvaliacaoCard'
-import Paginacao from '../components/Paginacao'
 import { formatarPlataformas } from '../utils/plataforma'
-
-const POR_PAGINA = 4
 
 const campo =
   'rounded-lg border border-borda bg-card px-3 py-2.5 text-sm outline-none focus:border-destaque'
+const campoModal =
+  'w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 text-sm outline-none focus:border-destaque'
+const botaoAcao =
+  'rounded-lg border border-borda px-3 py-1.5 text-xs hover:bg-white/5'
+const botaoExcluir =
+  'rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10'
+
+function Modal({ titulo, onFechar, children }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-borda bg-card p-5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">{titulo}</h3>
+          <button
+            type="button"
+            onClick={onFechar}
+            className="text-white/60 hover:text-white"
+            aria-label="Fechar"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function plataformaParaTexto(valor) {
+  const texto = formatarPlataformas(valor)
+  return /informada/i.test(texto) ? '' : texto
+}
 
 export default function Home() {
-  const [jogosBanco, setJogosBanco] = useState([])
-  const [todosOsJogos, setTodosOsJogos] = useState([])
+  const [jogos, setJogos] = useState([])
   const [carregandoJogos, setCarregandoJogos] = useState(true)
   const [erroJogos, setErroJogos] = useState('')
-  const [generoJogos, setGeneroJogos] = useState('')
 
-  const [avaliacoesBanco, setAvaliacoesBanco] = useState([])
+  const [avaliacoes, setAvaliacoes] = useState([])
   const [carregandoAvaliacoes, setCarregandoAvaliacoes] = useState(true)
   const [erroAvaliacoes, setErroAvaliacoes] = useState('')
 
-  const [buscaId, setBuscaId] = useState('')
+  const [jogoSelecionadoId, setJogoSelecionadoId] = useState('')
   const [jogoEncontrado, setJogoEncontrado] = useState(null)
-  const [buscandoId, setBuscandoId] = useState(false)
-  const [erroBuscaId, setErroBuscaId] = useState('')
+  const [buscandoJogo, setBuscandoJogo] = useState(false)
+  const [erroBusca, setErroBusca] = useState('')
 
-  const [busca, setBusca] = useState('')
-  const [genero, setGenero] = useState('')
-  const [ordem, setOrdem] = useState('recentes')
-  const [pagina, setPagina] = useState(1)
+  const [filtroJogo, setFiltroJogo] = useState('')
 
-  useEffect(() => {
-    async function carregarJogos() {
-      try {
-        const dados = await listarJogos()
+  const [formJogo, setFormJogo] = useState(null)
+  const [formAvaliacao, setFormAvaliacao] = useState(null)
+  const [salvando, setSalvando] = useState(false)
+  const [erroModal, setErroModal] = useState('')
+  const [erroAcao, setErroAcao] = useState('')
 
-        setTodosOsJogos(dados || [])
-        setJogosBanco(dados || [])
-        setErroJogos('')
-      } catch (erro) {
-        setErroJogos(erro.message || 'Erro ao carregar os jogos.')
-      } finally {
-        setCarregandoJogos(false)
-      }
-    }
-
-    async function carregarAvaliacoes() {
-      try {
-        const dados = await listarAvaliacoes()
-        setAvaliacoesBanco(dados || [])
-        setErroAvaliacoes('')
-      } catch (erro) {
-        setErroAvaliacoes(
-          erro.message || 'Erro ao carregar as avaliações.'
-        )
-      } finally {
-        setCarregandoAvaliacoes(false)
-      }
-    }
-
-    carregarJogos()
-    carregarAvaliacoes()
-  }, [])
-
-  async function pesquisarPorId(event) {
-    event.preventDefault()
-
-    const id = buscaId.trim()
-
-    setJogoEncontrado(null)
-    setErroBuscaId('')
-
-    if (!id) {
-      setErroBuscaId('Digite o ID do jogo.')
-      return
-    }
-
-    if (!/^\d+$/.test(id) || Number(id) < 1) {
-      setErroBuscaId('Digite um ID numérico válido.')
-      return
-    }
-
-    setBuscandoId(true)
-
+  async function carregarJogos() {
     try {
-      const jogo = await buscarJogoPorId(id)
-      setJogoEncontrado(jogo)
+      const dados = await listarJogos()
+      setJogos(dados || [])
+      setErroJogos('')
     } catch (erro) {
-      setErroBuscaId(
-        erro.message || 'Não foi possível encontrar o jogo.'
-      )
-    } finally {
-      setBuscandoId(false)
-    }
-  }
-
-  function limparBuscaId() {
-    setBuscaId('')
-    setJogoEncontrado(null)
-    setErroBuscaId('')
-  }
-
-  async function filtrarJogosPorGenero(novoGenero) {
-    setGeneroJogos(novoGenero)
-    setCarregandoJogos(true)
-    setErroJogos('')
-
-    try {
-      const dados = await listarJogos(novoGenero)
-      setJogosBanco(dados || [])
-    } catch (erro) {
-      setErroJogos(erro.message || 'Erro ao filtrar os jogos.')
+      setErroJogos(erro.message || 'Erro ao carregar os jogos.')
     } finally {
       setCarregandoJogos(false)
     }
   }
 
-  const generos = useMemo(
-    () => [
-      ...new Set(
-        todosOsJogos.map((jogo) => jogo.genero).filter(Boolean)
-      ),
-    ],
-    [todosOsJogos]
-  )
+  async function carregarAvaliacoes() {
+    try {
+      const dados = await listarAvaliacoes()
+      setAvaliacoes(dados || [])
+      setErroAvaliacoes('')
+    } catch (erro) {
+      setErroAvaliacoes(erro.message || 'Erro ao carregar as avaliações.')
+    } finally {
+      setCarregandoAvaliacoes(false)
+    }
+  }
+
+  useEffect(() => {
+    carregarJogos()
+    carregarAvaliacoes()
+  }, [])
+
+  async function selecionarJogo(id) {
+    setJogoSelecionadoId(id)
+    setJogoEncontrado(null)
+    setErroBusca('')
+
+    if (!id) return
+
+    setBuscandoJogo(true)
+
+    try {
+      setJogoEncontrado(await buscarJogoPorId(id))
+    } catch (erro) {
+      setErroBusca(erro.message || 'Não foi possível encontrar o jogo.')
+    } finally {
+      setBuscandoJogo(false)
+    }
+  }
+
+  function limparSelecao() {
+    setJogoSelecionadoId('')
+    setJogoEncontrado(null)
+    setErroBusca('')
+  }
+
+  function abrirEdicaoJogo(jogo) {
+    setErroModal('')
+    setFormJogo({
+      id: jogo.id,
+      titulo: jogo.titulo || '',
+      capa_url: jogo.capa_url || '',
+      descricao: jogo.descricao || '',
+      genero: jogo.genero || '',
+      plataforma: plataformaParaTexto(jogo.plataforma),
+    })
+  }
+
+  function abrirEdicaoAvaliacao(avaliacao) {
+    setErroModal('')
+    setFormAvaliacao({
+      id: avaliacao.id,
+      nome_avaliador: avaliacao.nome_avaliador || '',
+      nota: Number(avaliacao.nota) || 0,
+      review: avaliacao.review || '',
+    })
+  }
+
+  function alterarFormJogo(event) {
+    const { name, value } = event.target
+    setFormJogo((atual) => ({ ...atual, [name]: value }))
+  }
+
+  function alterarFormAvaliacao(event) {
+    const { name, value } = event.target
+    setFormAvaliacao((atual) => ({ ...atual, [name]: value }))
+  }
+
+  async function salvarJogo(event) {
+    event.preventDefault()
+    setErroModal('')
+
+    if (!formJogo.titulo.trim()) {
+      setErroModal('Informe o título do jogo.')
+      return
+    }
+
+    setSalvando(true)
+
+    try {
+      await editarJogo(formJogo.id, {
+        titulo: formJogo.titulo.trim(),
+        capa_url: formJogo.capa_url.trim() || null,
+        descricao: formJogo.descricao.trim() || null,
+        genero: formJogo.genero.trim() || null,
+        plataforma: formJogo.plataforma
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      })
+
+      setFormJogo(null)
+      limparSelecao()
+      await carregarJogos()
+    } catch (erro) {
+      setErroModal(erro.message || 'Não foi possível salvar o jogo.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  async function salvarAvaliacao(event) {
+    event.preventDefault()
+    setErroModal('')
+
+    if (!formAvaliacao.nome_avaliador.trim()) {
+      setErroModal('Informe o nome do avaliador.')
+      return
+    }
+
+    if (formAvaliacao.nota < 1 || formAvaliacao.nota > 5) {
+      setErroModal('Selecione uma nota de 1 a 5.')
+      return
+    }
+
+    setSalvando(true)
+
+    try {
+      await editarAvaliacao(formAvaliacao.id, {
+        nome_avaliador: formAvaliacao.nome_avaliador.trim(),
+        nota: formAvaliacao.nota,
+        review: formAvaliacao.review.trim(),
+      })
+
+      setFormAvaliacao(null)
+      await Promise.all([carregarAvaliacoes(), carregarJogos()])
+    } catch (erro) {
+      setErroModal(erro.message || 'Não foi possível salvar a avaliação.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  async function removerJogo(jogo) {
+    if (!window.confirm(`Excluir "${jogo.titulo}"?`)) return
+
+    setErroAcao('')
+
+    try {
+      await excluirJogo(jogo.id)
+      setFiltroJogo('')
+      limparSelecao()
+      await Promise.all([carregarJogos(), carregarAvaliacoes()])
+    } catch (erro) {
+      setErroAcao(erro.message || 'Não foi possível excluir o jogo.')
+    }
+  }
+
+  async function removerAvaliacao(avaliacao) {
+    if (!window.confirm('Excluir esta avaliação?')) return
+
+    setErroAcao('')
+
+    try {
+      await excluirAvaliacao(avaliacao.id)
+      await Promise.all([carregarAvaliacoes(), carregarJogos()])
+    } catch (erro) {
+      setErroAcao(erro.message || 'Não foi possível excluir a avaliação.')
+    }
+  }
 
   const lista = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-
-    return avaliacoesBanco
+    return avaliacoes
       .map((avaliacao) => ({
         avaliacao,
-        jogo: todosOsJogos.find(
+        jogo: jogos.find(
           (jogo) => Number(jogo.id) === Number(avaliacao.jogo_id)
         ),
       }))
-      .filter(({ avaliacao, jogo }) => {
+      .filter(({ jogo }) => {
         if (!jogo) return false
 
-        const titulo = (jogo.titulo || '').toLowerCase()
-        const nome = (avaliacao.nome_avaliador || '').toLowerCase()
-
-        return (
-          (!genero || jogo.genero === genero) &&
-          (!termo ||
-            titulo.includes(termo) ||
-            nome.includes(termo))
-        )
+        return !filtroJogo || Number(jogo.id) === Number(filtroJogo)
       })
-      .sort((a, b) => {
-        if (ordem === 'maior') {
-          return Number(b.avaliacao.nota) - Number(a.avaliacao.nota)
-        }
-
-        if (ordem === 'menor') {
-          return Number(a.avaliacao.nota) - Number(b.avaliacao.nota)
-        }
-
-        return (b.avaliacao.criado_em || '').localeCompare(
+      .sort((a, b) =>
+        (b.avaliacao.criado_em || '').localeCompare(
           a.avaliacao.criado_em || ''
         )
-      })
-  }, [avaliacoesBanco, todosOsJogos, busca, genero, ordem])
-
-  const totalPaginas = Math.max(
-    1,
-    Math.ceil(lista.length / POR_PAGINA)
-  )
-
-  const inicio = (pagina - 1) * POR_PAGINA
-  const visiveis = lista.slice(inicio, inicio + POR_PAGINA)
-
-  function mudar(setter) {
-    return (event) => {
-      setter(event.target.value)
-      setPagina(1)
-    }
-  }
+      )
+  }, [avaliacoes, jogos, filtroJogo])
 
   function renderizarJogo(jogo) {
     return (
@@ -207,9 +296,7 @@ export default function Home() {
 
         <div className="p-4">
           <div className="flex items-start justify-between gap-2">
-            <h2 className="break-words text-lg font-bold">
-              {jogo.titulo}
-            </h2>
+            <h2 className="break-words text-lg font-bold">{jogo.titulo}</h2>
 
             <span className="shrink-0 rounded bg-black/20 px-2 py-1 text-xs text-white/60">
               ID: {jogo.id}
@@ -230,13 +317,28 @@ export default function Home() {
             Plataforma: {formatarPlataformas(jogo.plataforma)}
           </p>
 
-          <div className="mt-4 border-t border-borda pt-3">
+          <div className="mt-4 flex items-center justify-between gap-2 border-t border-borda pt-3">
             <p className="text-sm text-destaque">
               ★ {Number(jogo.nota_media || 0).toFixed(1)}
-              <span className="ml-2 text-xs text-white/50">
-                Nota média
-              </span>
+              <span className="ml-2 text-xs text-white/50">Nota média</span>
             </p>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => abrirEdicaoJogo(jogo)}
+                className={botaoAcao}
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => removerJogo(jogo)}
+                className={botaoExcluir}
+              >
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       </article>
@@ -252,61 +354,64 @@ export default function Home() {
 
         <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h1 className="text-4xl font-extrabold">
-              Biblioteca de jogos
-            </h1>
+            <h1 className="text-4xl font-extrabold">Biblioteca de jogos</h1>
             <p className="mt-2 text-sm text-white/60">
               Confira os jogos cadastrados no GameTrack.
             </p>
           </div>
 
           <p className="text-xs text-white/50">
-            {todosOsJogos.length} jogos cadastrados
+            {jogos.length} jogos cadastrados
           </p>
         </div>
 
-        <form
-          onSubmit={pesquisarPorId}
-          className="mt-5 flex flex-wrap gap-3"
-        >
-          <input
-            type="number"
-            min="1"
-            value={buscaId}
-            onChange={(event) => setBuscaId(event.target.value)}
-            placeholder="Digite o ID do jogo"
+        {erroAcao && (
+          <p role="alert" className="mt-4 text-sm text-red-400">
+            {erroAcao}
+          </p>
+        )}
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <select
+            value={jogoSelecionadoId}
+            onChange={(event) => selecionarJogo(event.target.value)}
+            disabled={carregandoJogos || jogos.length === 0}
             className={`${campo} min-w-0 flex-1`}
-          />
-
-          <button
-            type="submit"
-            disabled={buscandoId}
-            className="rounded-lg bg-destaque px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            aria-label="Selecionar jogo"
           >
-            {buscandoId ? 'Buscando...' : 'Buscar por ID'}
-          </button>
+            <option value="">Selecione um jogo</option>
+            {jogos.map((jogo) => (
+              <option key={jogo.id} value={jogo.id}>
+                {jogo.titulo} (ID {jogo.id})
+              </option>
+            ))}
+          </select>
 
-          {(jogoEncontrado || erroBuscaId) && (
+          {(jogoSelecionadoId || erroBusca) && (
             <button
               type="button"
-              onClick={limparBuscaId}
+              onClick={limparSelecao}
               className="rounded-lg border border-borda px-4 py-2.5 text-sm"
             >
               Limpar
             </button>
           )}
-        </form>
+        </div>
 
-        {erroBuscaId && (
+        {buscandoJogo && (
+          <p className="mt-3 text-sm text-white/60">Buscando...</p>
+        )}
+
+        {erroBusca && (
           <p role="alert" className="mt-3 text-sm text-red-400">
-            {erroBuscaId}
+            {erroBusca}
           </p>
         )}
 
         {jogoEncontrado && (
           <div className="mt-5">
             <p className="mb-3 text-sm font-semibold text-destaque">
-              Jogo encontrado pelo ID
+              Jogo selecionado
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {renderizarJogo(jogoEncontrado)}
@@ -315,9 +420,7 @@ export default function Home() {
         )}
 
         {carregandoJogos && (
-          <p className="mt-5 text-sm text-white/60">
-            Carregando jogos...
-          </p>
+          <p className="mt-5 text-sm text-white/60">Carregando jogos...</p>
         )}
 
         {erroJogos && (
@@ -333,52 +436,19 @@ export default function Home() {
           </div>
         )}
 
-        {!carregandoJogos &&
-          !erroJogos &&
-          jogosBanco.length === 0 &&
-          todosOsJogos.length === 0 && (
-            <div className="mt-5 rounded-xl border border-dashed border-borda p-8 text-center text-sm text-white/50">
-              Nenhum jogo cadastrado ainda.
-            </div>
-          )}
+        {!carregandoJogos && !erroJogos && jogos.length === 0 && (
+          <div className="mt-5 rounded-xl border border-dashed border-borda p-8 text-center text-sm text-white/50">
+            Nenhum jogo cadastrado ainda.
+          </div>
+        )}
 
-        {!erroJogos && todosOsJogos.length > 0 && (
+        {!erroJogos && jogos.length > 0 && (
           <>
-            <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-bold">Todos os jogos</h2>
+            <h2 className="mt-7 text-lg font-bold">Todos os jogos</h2>
 
-              <select
-                value={generoJogos}
-                onChange={(event) =>
-                  filtrarJogosPorGenero(event.target.value)
-                }
-                disabled={carregandoJogos}
-                className={campo}
-                aria-label="Filtrar jogos por gênero"
-              >
-                <option value="">Todos os gêneros</option>
-
-                {generos.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {jogos.map(renderizarJogo)}
             </div>
-
-            {carregandoJogos ? (
-              <p className="mt-4 text-sm text-white/60">
-                Carregando jogos...
-              </p>
-            ) : jogosBanco.length > 0 ? (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {jogosBanco.map(renderizarJogo)}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-white/60">
-                Nenhum jogo encontrado para esse gênero.
-              </p>
-            )}
           </>
         )}
       </div>
@@ -390,51 +460,33 @@ export default function Home() {
 
         <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-4xl font-extrabold">
-              Todas as avaliações
-            </h2>
+            <h2 className="text-4xl font-extrabold">Todas as avaliações</h2>
             <p className="mt-2 text-sm text-white/60">
               Leia o que a comunidade está jogando.
             </p>
           </div>
 
           <p className="text-xs text-white/50">
-            {avaliacoesBanco.length}{' '}
-            {avaliacoesBanco.length === 1
+            {avaliacoes.length}{' '}
+            {avaliacoes.length === 1
               ? 'avaliação publicada'
               : 'avaliações publicadas'}
           </p>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <input
-            value={busca}
-            onChange={mudar(setBusca)}
-            placeholder="Buscar por jogo ou avaliador"
-            className={`${campo} min-w-60 flex-1`}
-          />
-
           <select
-            value={genero}
-            onChange={mudar(setGenero)}
-            className={campo}
+            value={filtroJogo}
+            onChange={(event) => setFiltroJogo(event.target.value)}
+            className={`${campo} min-w-60 flex-1`}
+            aria-label="Filtrar avaliações por jogo"
           >
-            <option value="">Todos os gêneros</option>
-            {generos.map((g) => (
-              <option key={g} value={g}>
-                {g}
+            <option value="">Todos os jogos</option>
+            {jogos.map((jogo) => (
+              <option key={jogo.id} value={jogo.id}>
+                {jogo.titulo}
               </option>
             ))}
-          </select>
-
-          <select
-            value={ordem}
-            onChange={mudar(setOrdem)}
-            className={campo}
-          >
-            <option value="recentes">Mais recentes</option>
-            <option value="maior">Maior nota</option>
-            <option value="menor">Menor nota</option>
           </select>
         </div>
 
@@ -445,7 +497,7 @@ export default function Home() {
 
           <span>
             {lista.length
-              ? `Mostrando ${inicio + 1}-${inicio + visiveis.length} de ${lista.length} avaliações`
+              ? `${lista.length} de ${avaliacoes.length} avaliações`
               : 'Nenhuma avaliação'}
           </span>
         </div>
@@ -466,31 +518,176 @@ export default function Home() {
             </button>
           </div>
         ) : lista.length > 0 ? (
-          <>
-            <div className="mt-3 grid gap-4 md:grid-cols-2">
-              {visiveis.map(({ avaliacao, jogo }) => (
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            {lista.map(({ avaliacao, jogo }) => (
+              <div key={avaliacao.id} className="flex flex-col gap-2">
                 <AvaliacaoCard
-                  key={avaliacao.id}
                   avaliacao={avaliacao}
                   jogo={jogo}
                   media={Number(jogo.nota_media || 0)}
                 />
-              ))}
-            </div>
 
-            <Paginacao
-              pagina={pagina}
-              total={totalPaginas}
-              porPagina={POR_PAGINA}
-              onChange={setPagina}
-            />
-          </>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => abrirEdicaoAvaliacao(avaliacao)}
+                    className={botaoAcao}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removerAvaliacao(avaliacao)}
+                    className={botaoExcluir}
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="mt-3 rounded-xl border border-dashed border-borda p-12 text-center text-white/50">
             Nenhuma avaliação encontrada para esse filtro.
           </div>
         )}
       </div>
+
+      {formJogo && (
+        <Modal titulo="Editar jogo" onFechar={() => setFormJogo(null)}>
+          <form onSubmit={salvarJogo} className="space-y-4">
+            <input
+              name="titulo"
+              value={formJogo.titulo}
+              onChange={alterarFormJogo}
+              placeholder="Título *"
+              className={campoModal}
+            />
+            <input
+              name="capa_url"
+              type="url"
+              value={formJogo.capa_url}
+              onChange={alterarFormJogo}
+              placeholder="URL da capa"
+              className={campoModal}
+            />
+            <textarea
+              name="descricao"
+              rows={4}
+              value={formJogo.descricao}
+              onChange={alterarFormJogo}
+              placeholder="Descrição"
+              className={`${campoModal} resize-y`}
+            />
+            <input
+              name="genero"
+              value={formJogo.genero}
+              onChange={alterarFormJogo}
+              placeholder="Gênero"
+              className={campoModal}
+            />
+            <input
+              name="plataforma"
+              value={formJogo.plataforma}
+              onChange={alterarFormJogo}
+              placeholder="Plataformas separadas por vírgula"
+              className={campoModal}
+            />
+
+            {erroModal && (
+              <p role="alert" className="text-sm text-red-400">
+                {erroModal}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setFormJogo(null)}
+                className={botaoAcao}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={salvando}
+                className="rounded-lg bg-destaque px-4 py-2 text-sm font-bold text-fundo disabled:opacity-50"
+              >
+                {salvando ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {formAvaliacao && (
+        <Modal
+          titulo="Editar avaliação"
+          onFechar={() => setFormAvaliacao(null)}
+        >
+          <form onSubmit={salvarAvaliacao} className="space-y-4">
+            <input
+              name="nome_avaliador"
+              value={formAvaliacao.nome_avaliador}
+              onChange={alterarFormAvaliacao}
+              placeholder="Nome do avaliador *"
+              className={campoModal}
+            />
+
+            <div className="grid grid-cols-5 gap-1.5">
+              {[1, 2, 3, 4, 5].map((valor) => (
+                <button
+                  key={valor}
+                  type="button"
+                  aria-pressed={formAvaliacao.nota === valor}
+                  onClick={() =>
+                    setFormAvaliacao((atual) => ({ ...atual, nota: valor }))
+                  }
+                  className={`rounded-md border py-2.5 text-sm transition ${
+                    formAvaliacao.nota === valor
+                      ? 'border-destaque bg-destaque/10 text-destaque'
+                      : 'border-borda text-white/60 hover:text-destaque'
+                  }`}
+                >
+                  ★ {valor}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              name="review"
+              rows={4}
+              value={formAvaliacao.review}
+              onChange={alterarFormAvaliacao}
+              placeholder="Review (opcional)"
+              className={`${campoModal} resize-y`}
+            />
+
+            {erroModal && (
+              <p role="alert" className="text-sm text-red-400">
+                {erroModal}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setFormAvaliacao(null)}
+                className={botaoAcao}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={salvando}
+                className="rounded-lg bg-destaque px-4 py-2 text-sm font-bold text-fundo disabled:opacity-50"
+              >
+                {salvando ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </section>
   )
 }
