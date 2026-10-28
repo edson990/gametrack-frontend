@@ -1,25 +1,52 @@
 
 import { useState } from 'react'
-
-const CAPA_PADRAO =
-  'https://cdn.akamai.steamstatic.com/steam/apps/753640/library_600x900.jpg'
+import { cadastrarJogo } from '../services/api'
 
 export default function AdicionarJogo() {
   const [titulo, setTitulo] = useState('Outer Wilds')
-  const [urlCapa, setUrlCapa] = useState(CAPA_PADRAO)
+  const [urlCapa, setUrlCapa] = useState(
+    'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/753640/header.jpg'
+  )
   const [descricao, setDescricao] = useState(
-    'Explore um sistema solar cheio de mistérios em uma aventura espacial de mundo aberto. Descubra os segredos de uma civilização perdida e encontre respostas antes que o tempo recomece.'
+    'Um jogo de exploração espacial em um sistema solar preso em um ciclo temporal.'
   )
-  const [genero, setGenero] = useState('Aventura e exploração')
-  const [plataformas, setPlataformas] = useState(
-    'PC, PlayStation 4, Nintendo Switch'
-  )
-  const [capaComErro, setCapaComErro] = useState(false)
+  const [genero, setGenero] = useState('Aventura')
+  const [plataformas, setPlataformas] = useState('PC')
   const [mensagem, setMensagem] = useState('')
+  const [carregando, setCarregando] = useState(false)
+  const [capaComErro, setCapaComErro] = useState(false)
 
-  function atualizarCapa(valor) {
-    setUrlCapa(valor)
-    setCapaComErro(false)
+  async function adicionarJogo(event) {
+    event.preventDefault()
+    setMensagem('')
+    setCarregando(true)
+
+    try {
+      const plataformasArray = plataformas
+        .split(',')
+        .map((plataforma) => plataforma.trim())
+        .filter((plataforma) => plataforma !== '')
+
+      await cadastrarJogo({
+        titulo: titulo.trim(),
+        capa_url: urlCapa.trim() || null,
+        descricao: descricao.trim() || null,
+        genero: genero.trim() || null,
+        plataforma: plataformasArray,
+      })
+
+      setMensagem('Jogo cadastrado com sucesso no GameTrack!')
+      setTitulo('')
+      setUrlCapa('')
+      setDescricao('')
+      setGenero('')
+      setPlataformas('')
+      setCapaComErro(false)
+    } catch (erro) {
+      setMensagem(erro.message || 'Não foi possível cadastrar o jogo.')
+    } finally {
+      setCarregando(false)
+    }
   }
 
   function cancelar() {
@@ -28,214 +55,215 @@ export default function AdicionarJogo() {
     setDescricao('')
     setGenero('')
     setPlataformas('')
-    setCapaComErro(false)
     setMensagem('')
+    setCapaComErro(false)
   }
-
-  function adicionarJogo(event) {
-    event.preventDefault()
-    setMensagem(
-      'Formulário preenchido! A integração para salvar o jogo será feita com o backend.'
-    )
-  }
-
-  const imagemValida = urlCapa.trim() !== '' && !capaComErro
 
   return (
-    <section className="mx-auto w-full max-w-5xl text-[#e8e9e4]">
-      <button
-        type="button"
-        onClick={() => window.history.back()}
-        className="mb-3 text-xs text-[#a4a79e] transition hover:text-[#c0ff5d]"
-      >
-        ← Voltar para avaliações
-      </button>
+    <main className="min-h-screen bg-[#10110f] px-6 py-10 text-white">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8">
+          <p className="mb-2 text-sm text-[#c0ff5d]">
+            GAMETRACK / BIBLIOTECA
+          </p>
 
-      <div className="mb-7 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="text-3xl font-bold md:text-4xl">
             Adicionar jogo
           </h1>
-          <p className="mt-2 text-xs leading-5 text-[#a4a79e]">
-            Não encontrou o que jogou? Adicione o jogo para que você e outras
-            pessoas possam avaliar.
+
+          <p className="mt-3 text-gray-400">
+            Adicione um novo jogo à biblioteca do GameTrack.
           </p>
         </div>
 
-        <span className="hidden pt-2 text-[9px] uppercase tracking-wide text-[#777c72] sm:block">
-          Mais um jogo ao catálogo
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[minmax(0,1.7fr)_minmax(250px,0.8fr)]">
-        <form
-          onSubmit={adicionarJogo}
-          className="rounded-lg border border-[#292e27] bg-[#171b17] p-4 sm:p-5"
-        >
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <h2 className="text-xs font-semibold">Informações do jogo</h2>
-            <span className="text-[9px] text-[#a4a79e]">
-              <span className="text-[#c0ff5d]">*</span> Campos obrigatórios
-            </span>
-          </div>
-
-          <div className="space-y-4">
+        <div className="grid gap-8 md:grid-cols-2">
+          <form
+            onSubmit={adicionarJogo}
+            className="space-y-5 rounded-2xl border border-white/10 bg-[#191a17] p-6"
+          >
             <div>
-              <label className="mb-1.5 block text-[11px]">
-                Título do jogo <span className="text-[#c0ff5d]">*</span>
+              <label
+                htmlFor="titulo"
+                className="mb-2 block text-sm font-medium"
+              >
+                Título do jogo *
               </label>
+
               <input
-                required
+                id="titulo"
+                type="text"
                 value={titulo}
-                onChange={(e) => {
-                  setTitulo(e.target.value)
-                  setMensagem('')
-                }}
-                placeholder="Ex.: Outer Wilds"
-                className="w-full rounded-md border border-[#292e27] bg-[#101310] px-3 py-2.5 text-xs outline-none transition placeholder:text-[#666b62] focus:border-[#a8e94e]"
+                onChange={(event) => setTitulo(event.target.value)}
+                placeholder="Ex.: Elden Ring"
+                required
+                className="w-full rounded-lg border border-white/10 bg-[#10110f] px-4 py-3 outline-none focus:border-[#c0ff5d]"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[11px]">
+              <label
+                htmlFor="urlCapa"
+                className="mb-2 block text-sm font-medium"
+              >
                 URL da capa
               </label>
+
               <input
+                id="urlCapa"
                 type="url"
                 value={urlCapa}
-                onChange={(e) => atualizarCapa(e.target.value)}
-                placeholder="https://exemplo.com/capa.jpg"
-                className="w-full rounded-md border border-[#292e27] bg-[#101310] px-3 py-2.5 text-xs outline-none transition placeholder:text-[#666b62] focus:border-[#a8e94e]"
+                onChange={(event) => {
+                  setUrlCapa(event.target.value)
+                  setCapaComErro(false)
+                }}
+                placeholder="https://..."
+                className="w-full rounded-lg border border-white/10 bg-[#10110f] px-4 py-3 outline-none focus:border-[#c0ff5d]"
               />
-              <p className="mt-1.5 text-[9px] leading-4 text-[#777c72]">
-                Use o link direto de uma imagem. Prefira uma capa vertical (2:3).
-              </p>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[11px]">
+              <label
+                htmlFor="descricao"
+                className="mb-2 block text-sm font-medium"
+              >
                 Descrição
               </label>
+
               <textarea
-                rows={4}
+                id="descricao"
                 value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Conte um pouco sobre o jogo..."
-                className="w-full resize-y rounded-md border border-[#292e27] bg-[#101310] px-3 py-2.5 text-xs leading-5 outline-none transition placeholder:text-[#666b62] focus:border-[#a8e94e]"
+                onChange={(event) => setDescricao(event.target.value)}
+                placeholder="Descreva o jogo..."
+                rows={4}
+                className="w-full resize-y rounded-lg border border-white/10 bg-[#10110f] px-4 py-3 outline-none focus:border-[#c0ff5d]"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[11px]">Gênero</label>
+              <label
+                htmlFor="genero"
+                className="mb-2 block text-sm font-medium"
+              >
+                Gênero
+              </label>
+
               <input
+                id="genero"
+                type="text"
                 value={genero}
-                onChange={(e) => setGenero(e.target.value)}
-                placeholder="Ex.: RPG, aventura, estratégia"
-                className="w-full rounded-md border border-[#292e27] bg-[#101310] px-3 py-2.5 text-xs outline-none transition placeholder:text-[#666b62] focus:border-[#a8e94e]"
+                onChange={(event) => setGenero(event.target.value)}
+                placeholder="Ex.: RPG, Aventura, Ação"
+                className="w-full rounded-lg border border-white/10 bg-[#10110f] px-4 py-3 outline-none focus:border-[#c0ff5d]"
               />
-              <p className="mt-1.5 text-[9px] text-[#777c72]">
-                Ex.: RPG, plataforma, aventura, estratégia.
-              </p>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[11px]">Plataformas</label>
+              <label
+                htmlFor="plataformas"
+                className="mb-2 block text-sm font-medium"
+              >
+                Plataforma
+              </label>
+
               <input
+                id="plataformas"
+                type="text"
                 value={plataformas}
-                onChange={(e) => setPlataformas(e.target.value)}
-                placeholder="PC, PlayStation 5, Xbox..."
-                className="w-full rounded-md border border-[#292e27] bg-[#101310] px-3 py-2.5 text-xs outline-none transition placeholder:text-[#666b62] focus:border-[#a8e94e]"
+                onChange={(event) => setPlataformas(event.target.value)}
+                placeholder="Ex.: PC, PlayStation, Xbox"
+                className="w-full rounded-lg border border-white/10 bg-[#10110f] px-4 py-3 outline-none focus:border-[#c0ff5d]"
               />
-              <p className="mt-1.5 text-[9px] text-[#777c72]">
-                Se houver mais de uma, separe por vírgulas.
+
+              <p className="mt-2 text-xs text-gray-500">
+                Separe por vírgulas. Opções aceitas: PC, PlayStation,
+                Xbox e Nintendo Switch.
               </p>
             </div>
-          </div>
 
-          {mensagem && (
-            <p
-              role="status"
-              className="mt-4 rounded-md border border-[#526b32] bg-[#20291a] p-3 text-xs leading-5 text-[#c0ff5d]"
-            >
-              {mensagem}
-            </p>
-          )}
+            {mensagem && (
+              <p
+                role="status"
+                className={`rounded-lg p-3 text-sm ${
+                  mensagem.includes('sucesso')
+                    ? 'bg-[#c0ff5d]/10 text-[#c0ff5d]'
+                    : 'bg-red-500/10 text-red-400'
+                }`}
+              >
+                {mensagem}
+              </p>
+            )}
 
-          <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#292e27] pt-4">
-            <button
-              type="button"
-              onClick={cancelar}
-              className="rounded-md border border-[#30362d] px-4 py-2 text-[11px] transition hover:bg-[#242a22]"
-            >
-              Cancelar
-            </button>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={carregando}
+                className="rounded-lg bg-[#c0ff5d] px-5 py-3 font-semibold text-black transition hover:bg-[#d2ff8b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {carregando ? 'Salvando...' : '+ Adicionar jogo'}
+              </button>
 
-            <button
-              type="submit"
-              className="rounded-md bg-[#c0ff5d] px-4 py-2.5 text-[11px] font-semibold text-[#17200d] transition hover:bg-[#d0ff8b]"
-            >
-              + &nbsp; Adicionar jogo
-            </button>
-          </div>
-        </form>
-
-        <aside className="space-y-4">
-          <div className="rounded-lg border border-[#292e27] bg-[#171b17] p-3.5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[9px] uppercase tracking-wide text-[#a4a79e]">
-                Preview do jogo
-              </h2>
-              <span className="text-xs text-[#777c72]">◉</span>
+              <button
+                type="button"
+                onClick={cancelar}
+                disabled={carregando}
+                className="rounded-lg border border-white/15 px-5 py-3 text-white transition hover:bg-white/5 disabled:opacity-60"
+              >
+                Limpar
+              </button>
             </div>
+          </form>
 
-            <div className="mx-auto mb-3 aspect-[2/3] w-full max-w-[190px] overflow-hidden rounded-md bg-[#242a22] sm:max-w-none">
-              {imagemValida ? (
+          <aside className="h-fit rounded-2xl border border-white/10 bg-[#191a17] p-6">
+            <p className="mb-4 text-sm font-medium text-gray-400">
+              PRÉ-VISUALIZAÇÃO
+            </p>
+
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#10110f]">
+              {urlCapa && !capaComErro ? (
                 <img
                   src={urlCapa}
                   alt={`Capa de ${titulo || 'jogo'}`}
                   onError={() => setCapaComErro(true)}
-                  onLoad={() => setCapaComErro(false)}
-                  className="h-full w-full object-cover"
+                  className="h-52 w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full min-h-40 items-center justify-center p-4 text-center text-xs text-[#a4a79e]">
+                <div className="flex h-52 items-center justify-center bg-[#242620] text-gray-500">
                   Capa indisponível
                 </div>
               )}
+
+              <div className="space-y-3 p-5">
+                <h2 className="text-2xl font-bold">
+                  {titulo || 'Título do jogo'}
+                </h2>
+
+                <div className="flex flex-wrap gap-2">
+                  {genero && (
+                    <span className="rounded-full bg-[#c0ff5d]/10 px-3 py-1 text-sm text-[#c0ff5d]">
+                      {genero}
+                    </span>
+                  )}
+
+                  {plataformas && (
+                    <span className="rounded-full bg-white/5 px-3 py-1 text-sm text-gray-300">
+                      {plataformas}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-sm leading-6 text-gray-400">
+                  {descricao || 'A descrição do jogo aparecerá aqui.'}
+                </p>
+              </div>
             </div>
 
-            <h3 className="break-words text-lg font-bold">
-              {titulo.trim() || 'Título do jogo'}
-            </h3>
-            <p className="mt-1 text-[10px] leading-4 text-[#a4a79e]">
-              {genero || 'Gênero não informado'}
+            <p className="mt-4 text-xs leading-5 text-gray-500">
+              A pré-visualização mostra como as informações preenchidas
+              poderão aparecer na biblioteca.
             </p>
-            <p className="mt-2 text-[9px] leading-4 text-[#777c72]">
-              {plataformas || 'Plataformas não informadas'}
-            </p>
-
-            <div className="mt-4 flex items-center gap-2 border-t border-[#292e27] pt-3">
-              <span className="text-sm text-[#c0ff5d]">▧</span>
-              <span className="text-[10px] text-[#a4a79e]">
-                Ainda sem avaliações
-              </span>
-            </div>
-          </div>
-
-          <div className="flex gap-3 px-1">
-            <span className="text-sm text-[#c0ff5d]">▥</span>
-            <div>
-              <h3 className="text-[10px] font-semibold">
-                Pronto para a primeira opinião.
-              </h3>
-              <p className="mt-1 text-[9px] leading-4 text-[#777c72]">
-                Depois de adicionar, o jogo ficará disponível na seleção de
-                jogos para criar uma avaliação.
-              </p>
-            </div>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
-    </section>
+    </main>
   )
 }

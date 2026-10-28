@@ -1,3 +1,5 @@
+import React from 'react'
+
 const gradientes = [
   'from-red-900 to-stone-700',
   'from-slate-900 to-blue-800',
@@ -8,14 +10,30 @@ const gradientes = [
 ]
 
 export default function Capa({ jogo, className = '' }) {
-  if (jogo.capa_url) {
-    return <img src={jogo.capa_url} alt={jogo.titulo} className={`rounded-lg object-cover ${className}`} />
+  const [erroImagem, setErroImagem] = React.useState(false)
+
+  const titulo = jogo?.titulo || 'Jogo'
+  const id = Number(jogo?.id) || 0
+  const gradiente = gradientes[id % gradientes.length]
+
+  if (jogo?.capa_url && !erroImagem) {
+    return (
+      <img
+        src={jogo.capa_url}
+        alt={`Capa de ${titulo}`}
+        onError={() => setErroImagem(true)}
+        className={`rounded-lg object-cover ${className}`}
+      />
+    )
   }
+
   return (
     <div
-      className={`grid place-items-center rounded-lg bg-gradient-to-br ${gradientes[jogo.id % gradientes.length]} ${className}`}
+      className={`grid place-items-center rounded-lg bg-gradient-to-br ${gradiente} ${className}`}
     >
-      <span className="text-4xl font-black text-white/30">{jogo.titulo[0]}</span>
+      <span className="text-4xl font-black text-white/30">
+        {titulo[0].toUpperCase()}
+      </span>
     </div>
   )
 }
