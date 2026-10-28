@@ -146,6 +146,7 @@ export default function Home() {
     setErroModal('')
     setFormAvaliacao({
       id: avaliacao.id,
+      jogo_id: avaliacao.jogo_id,
       nome_avaliador: avaliacao.nome_avaliador || '',
       nota: Number(avaliacao.nota) || 0,
       review: avaliacao.review || '',
@@ -213,6 +214,7 @@ export default function Home() {
 
     try {
       await editarAvaliacao(formAvaliacao.id, {
+        jogo_id: Number(formAvaliacao.jogo_id),
         nome_avaliador: formAvaliacao.nome_avaliador.trim(),
         nota: formAvaliacao.nota,
         review: formAvaliacao.review.trim(),
